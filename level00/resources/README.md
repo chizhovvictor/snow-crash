@@ -38,7 +38,21 @@ Code Morse Fractionné
 
 методом перебора (гитхаба) нашел César и использовал первый фариант, ключ готов
 
-токен для следующего левела x24ti5gi3x0ol2eh4esiuxias
+nottoohardhere
+
+
+Conclusion: Which Decode Method to Use?
+If it looks like shifted letters → Caesar, ROT13, Atbash
+
+If it's jumbled letters → Transposition ciphers
+
+If it contains =, /, or numbers → Base64, Hex, or Binary
+
+If it's unreadable but similar length to input → XOR
+
+If it’s a long string of letters/numbers → Hashing (MD5, SHA)
+
+If there are hidden messages in images or files → Steganography
 
 
 
