@@ -1,58 +1,68 @@
-1) в начале ищем файлы относящиеся к пользователю, у нас их 2 - флаг и левел. ищем по флагу, находим 2 файла. ищем по левелу находим убитый процесс
-2) смотрим по флагу
+# SnowCrash: Level 00 Walkthrough
 
-level00@SnowCrash:~$ find / -user "flag00" 2>/dev/null
+## Цель
+Получить доступ к пользователю `flag00`, найдя его пароль на машине.
+
+---
+
+## Шаг 1: Поиск файлов, связанных с пользователем
+
+Мы ищем файлы, принадлежащие пользователю `flag00`.
+
+```bash
+find / -user "flag00" 2>/dev/null
+```
+2>/dev/null — перенаправление потока ошибок, чтобы очистить вывод от сообщений об ошибках (например, "Permission denied").
+
+Результат:
+
+```bash
 /usr/sbin/john
 /rofs/usr/sbin/john
+```
 
-перенаправляем ошибки 2>/dev/null в нул чтобы очистить терминал от ошибок и получить только выполненые результаты
+## Шаг 2: Проверка содержимого найденных файлов
+```bash
+cat /usr/sbin/john
+cat /rofs/usr/sbin/john
+```
 
-3) смотрим с помощью cat что за файлы
-level00@SnowCrash:~$ cat /usr/sbin/john
+Вывод:
 cdiiddwpgswtgt
-level00@SnowCrash:~$ cat /rofs/usr/sbin/john
-cdiiddwpgswtgt
 
-4) данный код не подходит для пароля юезра флаг00
-5) Текущий результат — строка cdiiddwpgswtgt — может быть закодированной или зашифрованной информацией. Нужно использовать методы дешифровки или декодирования, а также проверить ее с помощью программы John the Ripper поскольку название файла скорее всего ведет к названия ютилиты.
+## Шаг 3: Анализ полученной строки
+Полученная строка cdiiddwpgswtgt не подходит как есть для входа под flag00. Вероятно, это зашифрованная строка.
 
-6) есть несколько методов декодирования
-Caesar Cipher
-Base64 Encoding
-ROT13 Cipher
-XOR-encoded
-Anagram or Simple Substitution Cipher
+Возможные методы дешифровки:
+- Caesar Cipher
+- ROT13 Cipher
+- Base64 Encoding
+- XOR
+- Простая замена символов
+- Анаграммы
 
-7) на форумах (гитхабе) нашел сайт dcode.fr
-8) провел анализ возможных шифров
-выдало 9:
-Chiffre Ragbaby	
-Chiffre Affine	
-Substitution Mono-alphabétique	
-Disque Chiffrant	
-Codage Base62	
-Base 58	
-Chiffre ROT (Rotation)	
-Code César	
-Code Morse Fractionné
+Также полезны сайты вроде https://www.dcode.fr/, где можно попробовать различные алгоритмы дешифровки.
 
-методом перебора (гитхаба) нашел César и использовал первый фариант, ключ готов
+## Подбор расшифровки
+На форумах (GitHub, dcode.fr) были протестированы несколько методов:
+- Chiffre ROT (Rotation)
+- Code César
+- Codage Base62
+- Substitution Mono-alphabétique
+И др.
+
+Методом перебора выяснилось, что это Caesar Cipher со смещением, и в первом варианте декодирования был получен пароль:
 
 nottoohardhere
 
-
-Conclusion: Which Decode Method to Use?
-If it looks like shifted letters → Caesar, ROT13, Atbash
-
-If it's jumbled letters → Transposition ciphers
-
-If it contains =, /, or numbers → Base64, Hex, or Binary
-
-If it's unreadable but similar length to input → XOR
-
-If it’s a long string of letters/numbers → Hashing (MD5, SHA)
-
-If there are hidden messages in images or files → Steganography
+## Заключение: Как понять, какой метод использовать?
+Если...	                                        Тогда возможно...
+Буквы смещены	                                Caesar, ROT13, Atbash
+Буквы перемешаны	                            Transposition Cipher
+Есть символы =, /, числа	                    Base64, Hex, Binary
+Похоже на рандом, длина как у входа	            XOR
+Очень длинная строка из букв/цифр	Хеш         (MD5, SHA и др.)
+Скрытое сообщение в файлах или картинках	    Steganography
 
 
 
