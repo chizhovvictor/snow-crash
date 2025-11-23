@@ -1,102 +1,112 @@
-Level09
-=======
+# Level09
 
-Flag
-----
+## Flag
 
 s5cAJpM8ev6XHw998pRWG728z
 
-* * *
+---
 
-Discovery
----------
+## Discovery
 
-### Проверка директории
+### Checking the directory
 
-    level09@SnowCrash:~$ ls -l
-    total 12
-    -rwsr-sr-x 1 flag09 level09 7640 Mar  5  2016 level09
-    ----r--r-- 1 flag09 level09   26 Mar  5  2016 token
+```
+level09@SnowCrash:~$ ls -l
+total 12
+-rwsr-sr-x 1 flag09 level09 7640 Mar  5  2016 level09
+----r--r-- 1 flag09 level09   26 Mar  5  2016 token
+```
 
-Наблюдение: есть исполняемый файл **level09** с SUID/SGID битами и файл **token**, который возможно содержит закодированный токен.
+Observation: there is an executable file **level09** with SUID/SGID bits and a **token** file, which may contain an encoded token.
 
-### Проверка файла level09
+### Checking the level09 file
 
-    level09@SnowCrash:~$ ./level09 
-    You need to provied only one arg.
+```
+level09@SnowCrash:~$ ./level09 
+You need to provied only one arg.
+```
 
-Программа требует аргумент. Динамический анализ через ltrace:
+The program requires an argument. Dynamic analysis using ltrace:
 
-    level09@SnowCrash:~$ ltrace ./level09 
-    __libc_start_main(0x80487ce, 1, 0xbffff7f4, 0x8048aa0, 0x8048b10 ptrace(0, 0, 1, 0, 0xb7e2fe38)          = -1
-    puts("You should not reverse this"You should not reverse this)     = 28
-    +++ exited (status 1) +++
+```
+level09@SnowCrash:~$ ltrace ./level09 
+__libc_start_main(0x80487ce, 1, 0xbffff7f4, 0x8048aa0, 0x8048b10 ptrace(0, 0, 1, 0, 0xb7e2fe38)          = -1
+puts("You should not reverse this"You should not reverse this)     = 28
++++ exited (status 1) +++
+```
 
-Проверим с аргументом:
+Let's test it with an argument:
 
-    level09@SnowCrash:~$ ./level09 token 
-    tpmhr
-    level09@SnowCrash:~$ cat token 
-    f4kmm6p|=�p�n��DB�Du{��
-    level09@SnowCrash:~$ ./level09 adfgkn
-    aehjos
-    level09@SnowCrash:~$ ./level09 aaaa
+```
+level09@SnowCrash:~$ ./level09 token 
+tpmhr
+level09@SnowCrash:~$ cat token 
+f4kmm6p|=�p�n��DB�Du{��
+level09@SnowCrash:~$ ./level09 adfgkn
+aehjos
+level09@SnowCrash:~$ ./level09 aaaa
+```
 
-Заметно, что программа выводит строку, которая выглядит как сдвинутая по символам. Каждый следующий символ кажется смещённым сильнее, чем предыдущий. Мое предположение, что это не случайный набор символов, а простая арифметическая операция над ASCII‑кодами. Проверил: первый символ отличается на 1, второй на 2, третий на 3… Возможно токен находится в файле **token** просто нам его нужно декодировать в обратном направлении.
+It is noticeable that the program outputs a string that looks like it’s shifted by characters. Each next character appears to be shifted more than the previous one. My assumption is that this is not a random sequence of characters but a simple arithmetic operation on ASCII codes. Checked: the first character differs by 1, the second by 2, the third by 3... It is possible that the token is stored in the **token** file, we just need to decode it in reverse.
 
-* * *
+---
 
-Use (Exploit)
--------------
+## Use (Exploit)
 
-### Декодирование токена
+### Decoding the token
 
-Скопируем файл **token** в /tmp/ и сделаем его читаемым:
+Copy the **token** file to /tmp/ and make it readable:
 
-    level09@SnowCrash:~$ cp token /tmp/
-    level09@SnowCrash:~$ chmod +r /tmp/token
-    level09@SnowCrash:~$ cat /tmp/token
-    f4kmm6p|=�p�n��DB�Du{��
+```
+level09@SnowCrash:~$ cp token /tmp/
+level09@SnowCrash:~$ chmod +r /tmp/token
+level09@SnowCrash:~$ cat /tmp/token
+f4kmm6p|=�p�n��DB�Du{��
+```
 
-С помощью команды **scp** передаем файл на локальную машину для обработки:
+Using **scp**, transfer the file to the local machine for processing:
 
-    f4r7s10% scp -P 4242 level09@192.168.56.107:/tmp/token ./level09/resources
+```
+f4r7s10% scp -P 4242 level09@192.168.56.107:/tmp/token ./level09/resources
+```
 
-Пишем маленькую программу **reverse.c**, которая вычитает позицию из ASCII-кода каждого символа для обратной дешифровки.
-Компиляция и запуск:
+Write a small program **reverse.c** that subtracts the character's position from the ASCII code for reverse decoding.
+Compile and run:
 
-    f4r7s10% gcc reverse.c
-    f4r7s10% ./a.out token
-    f3iji1ju5yuevaus41q1afiuq
+```
+f4r7s10% gcc reverse.c
+f4r7s10% ./a.out token
+f3iji1ju5yuevaus41q1afiuq
+```
 
-Это расшифрованный токен.
+This is the decoded token.
 
-### Получение флага
+### Getting the flag
 
-    level09@SnowCrash:~$ su flag09
-    Password: 
-    Don't forget to launch getflag !
-    flag09@SnowCrash:~$ getflag
-    Check flag.Here is your token : s5cAJpM8ev6XHw998pRWG728z
+```
+level09@SnowCrash:~$ su flag09
+Password: 
+Don't forget to launch getflag !
+flag09@SnowCrash:~$ getflag
+Check flag.Here is your token : s5cAJpM8ev6XHw998pRWG728z
+```
 
-Флаг успешно получен через декодирование содержимого файла **token**.
+The flag was successfully retrieved by decoding the contents of the **token** file.
 
-* * *
+---
 
-Prevention
-----------
+## Prevention
 
-*   Не хранить чувствительные данные в легко доступных файлах без защиты.
-*   Использовать надежные методы шифрования вместо простых сдвигов ASCII.
-*   Ограничить права на SUID/SGID файлы и контролировать доступ к ним.
+* Do not store sensitive data in easily accessible files without protection.
+* Use secure encryption methods instead of simple ASCII shifts.
+* Restrict permissions on SUID/SGID files and control access to them.
 
-* * *
+---
 
-Documentation
--------------
+## Documentation
 
-*   man ltrace
-*   man chmod
-*   man su
-*   man scp
-*   ASCII кодировка символов
+* man ltrace
+* man chmod
+* man su
+* man scp
+* ASCII character encoding
