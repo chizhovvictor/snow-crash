@@ -1,86 +1,96 @@
-Level01
-================
+# Level01
 
-Flag
-----
+## Flag
 
 f2av5il02puano7naaf6adaaf
 
-Discovery
----------
+## Discovery
 
-Начал с базового анализа системы. В первую очередь решил посмотреть, какие пользователи вообще существуют:
+I began with basic system analysis. First, I checked which users exist:
 
-    cat /etc/passwd
+```
+cat /etc/passwd
+```
 
-Вывод оказался длинным, но меня интересовали две группы пользователей: **levelXX** и **flagXX**. Видно, что пользователи имеют предсказуемые UID: level01 — 2001, flag01 — 3001.
+The output was long, but I was interested in two groups of users: **levelXX** and **flagXX**. Their UIDs follow a predictable pattern: level01 — 2001, flag01 — 3001.
 
-Попробовал посмотреть, какие файлы принадлежат этим пользователям:
+Then I tried to locate files owned by these users:
 
-    find / -user "flag01" 2>/dev/null
-    find / -user "level01" 2>/dev/null
+```
+find / -user "flag01" 2>/dev/null
+find / -user "level01" 2>/dev/null
+```
 
-Результата почти не было. Затем попытался искать файлы по правам:
+Almost no results. Next, I attempted to search by permissions:
 
-    find / -type f -perm -o=r 2>/dev/null
+```
+find / -type f -perm -o=r 2>/dev/null
+```
 
-Файлов слишком много — тупиковая ветка.
+Too many files — a dead end.
 
-Попытался прочитать файл shadow:
+I tried reading `/etc/shadow`:
 
-    cat /etc/shadow
+```
+cat /etc/shadow
+```
 
-Ожидаемо: _Permission denied_.
+As expected: *Permission denied*.
 
-Также проверил наличие world-writable файлов:
+I also checked for world‑writable files:
 
-    find / -type f -perm 777 2>/dev/null
+```
+find / -type f -perm 777 2>/dev/null
+```
 
-Пусто. После этого вернулся к файлу `/etc/passwd` и обнаружил, что у пользователя `flag01` хэш пароля находится прямо там:
+Nothing. After that, I returned to `/etc/passwd` and noticed that the password hash for user `flag01` is stored right there:
 
-    flag01:42hDRfypTqqnw:3001:3001::/home/flag/flag01:/bin/bash
+```
+flag01:42hDRfypTqqnw:3001:3001::/home/flag/flag01:/bin/bash
 
-Это крайне необычно для современных систем и указывает, что нужно попытаться взломать хэш. Я проанализировал его:
+flag01 - user
+42hDRfypTqqnw - password (x - password in /etc/shadow)
+3001 - user id
+3001 - group id
+/home/flag/flag01 - home catalog
+/bin/bash - default shell
+```
 
-*   не MD5 — формат не совпадает;
-*   не SHA‑512 — слишком короткий;
-*   не SHA‑256;
-*   не ROT13, не Caesar;
+This is extremely unusual for modern systems and indicates that we should try cracking the hash. I analyzed it:
 
-13 символов → это **старый DES crypt(3)**.
+* not MD5 — format doesn't match
+* not SHA‑512 — too short
+* not SHA‑256
+* not ROT13 / not Caesar
+* 13 characters → **old DES crypt(3)**
 
-Попробовал hashcat, но он не запустился без GPU-движка:
+I tried hashcat, but it wouldn’t run without a GPU backend:
 
-    ./hashcat.bin 42hDRfypTqqnw
+```
+./hashcat.bin 42hDRfypTqqnw
+```
 
-Перешёл на John the Ripper.
+Switched to John the Ripper.
 
-Use (Exploit)
--------------
+## Use (Exploit)
 
-Установил John the Ripper:
+Installed John the Ripper:
 
-    git clone https://github.com/openwall/john.git
-    cd john/src
-    ./configure && make -s clean && make -sj4
-    (или взять в папке john/src выполнить make generic)
-    
+```
+git clone https://github.com/openwall/john.git
+cd john/src
+./configure && make -s clean && make -sj4
+```
 
-Создал файл `hashes.txt`:
+(or simply run `make generic` inside `john/src`)
 
-    flag01:42hDRfypTqqnw
+Created `hashes.txt`:
 
-Запустил джон:
+```
+42hDRfypTqqnw
+```
 
-    ./john ./hashes.txt
-
-Он определил формат и почти сразу подобрал пароль:
-
-abcdefg
-
-Проверил через `--show`:
-
-    ?:abcdefg
+Ran John:
 
 ```
 f4r7s10% pwd
@@ -105,58 +115,86 @@ f4r7s10% ./level01/resources/john/run/john ./level01/resources/hashes.txt --show
 1 password hash cracked, 0 left
 ```
 
-Теперь можно войти под пользователем:
+John detected the hash type and cracked the password almost immediately:
 
-    su flag01
-    getflag
+```
+abcdefg
+```
 
-Результат:
+Verified via `--show`:
 
+```
+?:abcdefg
+```
+
+Full sample session:
+
+```
+Loaded 1 password hash (descrypt, traditional crypt(3))
+abcdefg          (?)     
+Session completed
+```
+
+Now I could log in:
+
+```
+su flag01
+getflag
+```
+
+Output:
+
+```
 Check flag. Here is your token : f2av5il02puano7naaf6adaaf
+```
 
-Prevention
-----------
+## Prevention
 
-Основные ошибки уровня:
+Main security issues of this level:
 
-### ❌ Хэш пароля хранится в `/etc/passwd`
+### The password hash is stored inside `/etc/passwd`
 
-Это позволяет любому пользователю прочитать хэш и попытаться взломать его. В старых системах пароли действительно хранились прямо в /etc/passwd в виде хэшей. В современных Linux пароли вынесены в файл /etc/shadow, а в /etc/passwd вместо хэша стоит x. Строка 42hDRfypTqqnw — это результат работы алгоритма хэширования (например, DES, MD5, SHA‑512). Настоящий пароль напрямую из этой строки узнать нельзя. Его можно только проверить при входе или пытаться подобрать, сравнивая хэши. Для учебных целей и аудита безопасности в Linux чаще всего используют программы John the Ripper и Hashcat. Они позволяют работать с хэшами паролей (например, DES, MD5, SHA‑512) и проверять их стойкость с помощью словарей или перебора
+This allows any user to read the hash and attempt offline cracking. In old UNIX systems this was normal, but modern Linux stores password hashes in `/etc/shadow`, while `/etc/passwd` contains only an `x`.
 
-### ❌ Использование устаревшего DES crypt(3)
+### Use of outdated DES crypt(3)
 
-DES ограничен 8 символами и легко поддаётся перебору.
+DES truncates passwords to 8 characters and is trivial to brute‑force.
 
-Правильно:
+Correct security measures:
 
-*   хранить хэши в `/etc/shadow`;
-*   ограничить доступ только root;
-*   использовать **SHA‑512** (`$6$`);
-*   включать политику сложности (pam\_pwquality).
+* store hashes in `/etc/shadow`;
+* restrict access to shadow (root‑only);
+* use **SHA‑512** (`$6$`) hashing;
+* enforce password complexity policies (`pam_pwquality`);
+* regularly audit the system for weak or legacy hashes.
 
-Documentation
--------------
+## Documentation
 
-*   `man passwd`
-*   `man crypt`
-*   `man shadow`
-*   John the Ripper — https://www.openwall.com/john
-*   crypt(3) — https://man7.org/linux/man-pages/man3/crypt.3.html
+* `man passwd`
+* `man crypt`
+* `man shadow`
+* John the Ripper — [https://www.openwall.com/john](https://www.openwall.com/john)
+* crypt(3) — [https://man7.org/linux/man-pages/man3/crypt.3.html](https://man7.org/linux/man-pages/man3/crypt.3.html)
 
-Automatic Testing
------------------
+## Automatic Testing
 
-Минимальный тест безопасности:
+Minimal security test:
 
-    #!/bin/bash
-    
-    grep -q "flag01" /etc/passwd || exit 1
-    
-    HASH=$(grep flag01 /etc/passwd | cut -d: -f2)
-    
-    if [[ ${#HASH} -eq 13 ]]; then
-      echo "Warning: DES hash detected"
-      exit 1
-    fi
-    
-    echo "OK: No weak hashes detected"
+```bash
+#!/bin/bash
+
+grep -q "flag01" /etc/passwd || exit 1
+
+HASH=$(grep flag01 /etc/passwd | cut -d: -f2)
+
+if [[ ${#HASH} -eq 13 ]]; then
+  echo "Warning: DES hash detected"
+  exit 1
+fi
+
+echo "OK: No weak hashes detected"
+```
+
+---
+
+Если хочешь, могу так же оформить **Level02** или перевести и структурировать остальные уровни.
