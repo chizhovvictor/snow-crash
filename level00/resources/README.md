@@ -6,13 +6,13 @@ x24ti5gi3x0ol2eh4esiuxias
 
 ## Discovery
 
-First, we need to find files related to the user `flag00`. We use:
+First, we need to find files associated with the `flag00` user. Use:
 
-```bash
+```
 find / -user "flag00" 2>/dev/null
 ```
 
-`2>/dev/null` redirects the error stream to clean up output from permission errors (e.g., "Permission denied").
+`2>/dev/null` — redirecting the error stream to clean the output from error messages (e.g., "Permission denied").
 Command output:
 
 ```bash
@@ -26,62 +26,62 @@ Both files contain the string:
 cdiiddwpgswtgt
 ```
 
-The string `cdiiddwpgswtgt` is not usable as-is to log in as flag00. Most likely, it is encrypted. Possible decryption methods:
+The obtained string `cdiiddwpgswtgt` does not work as‑is to log in as flag00. It is likely an encrypted string. Possible decoding methods:
 
 * Caesar Cipher
 * ROT
 * Base64 Encoding
 * XOR
-* Simple character substitution
+* Simple substitution cipher
 * Anagrams
 
-Online tools like [dcode.fr](https://www.dcode.fr/) can help try different decoding algorithms.
+Websites like [https://www.dcode.fr/](https://www.dcode.fr/) are also useful, where you can try different decoding algorithms.
 
-On forums (GitHub, dcode.fr), several methods were tested:
+On forums (GitHub, dcode.fr) several methods were tested:
 
 * Chiffre ROT (Rotation)
-* Caesar Code
-* Base62 Encoding
-* Monoalphabetic Substitution
-* etc.
+* Code César
+* Codage Base62
+* Substitution Mono‑alphabétique
+  and others.
 
-By trial, it was determined that the string is a Caesar Cipher with a shift. The first decoding attempt produced the password:
+Through trial and error, it turned out to be a Caesar Cipher with a shift, and in the first decoding attempt the password was obtained:
 
 ```text
 nottoohardhere
 ```
 
-This is the password of the user `flag00`.
+This turned out to be the password for the `flag00` user.
 
 ## Use
 
-Log in as user flag00 with the discovered password:
+Logging in as flag00 with the found password:
 
 ```bash
 su flag00
 Password: nottoohardhere
 ```
 
-After successful login, the level flag can be retrieved.
+After a successful login, you can retrieve the level flag.
 
 ## Prevention
 
-Security measures to prevent such cases on real systems:
+What security measures prevent such cases on real systems:
 
-* **Do not store passwords in plain text**, even in restricted directories.
-* **Use modern cryptographic methods** rather than simple ciphers (Caesar/ROT13).
-* **Limit file access with least privilege principles**.
-* **Perform regular file system audits** to detect suspicious data.
-* **Use integrity monitoring** (AIDE, Tripwire) to detect unwanted changes in system files.
+* **Do not store passwords in plain text** — even if they are placed in restricted directories.
+* **Use modern cryptographic methods**, not simple ciphers (Caesar/ROT13).
+* **Limit access to files based on the principle of least privilege**.
+* **Perform regular filesystem audits** to detect suspicious data.
+* **Use integrity checking tools** (AIDE, Tripwire) to detect unwanted changes in system files.
 
 ## Documentation
 
 Methods used in the solution:
 
-* **Caesar Cipher** — cipher with cyclic shift of each letter in the alphabet.
-* **ROT** — variant of Caesar with a fixed shift (e.g., ROT13).
-* **dcode.fr** — online tool for decryption, shift brute-forcing, frequency analysis.
-* **`find`** — searching files based on file system attributes.
+* **Caesar Cipher** — a cipher with a cyclic shift of each letter in the alphabet.
+* **ROT** — a variety of Caesar cipher with a fixed shift (e.g., ROT13).
+* **dcode.fr** — an online tool for decoding, shift brute‑forcing, frequency analysis.
+* **`find`** — searching for files by filesystem attributes.
 
 | If the string looks like…                   | Likely encoding method     |
 | ------------------------------------------- | -------------------------- |
