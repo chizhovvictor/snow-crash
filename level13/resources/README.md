@@ -1,110 +1,131 @@
-Level13
-==========================
+# Level13
 
-Flag
-----
+## Flag
 
 2A31L79asukciNyi8uppkEuSx
 
-* * *
+---
 
-Discovery
----------
+## Discovery
 
-### Проверка директории
+### Checking the directory
 
-    level13@SnowCrash:~$ ls -l
-    total 8
-    -rwsr-sr-x 1 flag13 level13 7303 Aug 30  2015 level13
+```
+level13@SnowCrash:~$ ls -l
+total 8
+-rwsr-sr-x 1 flag13 level13 7303 Aug 30  2015 level13
+```
 
-Запускаем программу:
+Run the program:
 
-    level13@SnowCrash:~$ ./level13 
-    UID 2013 started us but we we expect 4242
+```
+level13@SnowCrash:~$ ./level13 
+UID 2013 started us but we we expect 4242
+```
 
-Проверка ltrace:
+Check with ltrace:
 
-    level13@SnowCrash:~$ ltrace ./level13 
-    __libc_start_main(0x804858c, 1, 0xbffff7f4, 0x80485f0, 0x8048660 
-    getuid()                                = 2013
-    getuid()                                = 2013
-    printf("UID %d started us but we we expe"..., 2013UID 2013 started us but we we expect 4242) = 42
-    exit(1 +++ exited (status 1) +++
+```
+level13@SnowCrash:~$ ltrace ./level13 
+__libc_start_main(0x804858c, 1, 0xbffff7f4, 0x80485f0, 0x8048660 
+getuid()                                = 2013
+getuid()                                = 2013
+printf("UID %d started us but we we expe"..., 2013UID 2013 started us but we we expect 4242) = 42
+exit(1 +++ exited (status 1) +++
+```
 
-Анализ:
+Analysis:
 
-*   Программа вызывает `getuid()` дважды.
-*   Ожидаемый UID — **4242**.
-*   Наш UID — **2013** (level13), поэтому программа выходит.
+* The program calls `getuid()` twice.
+* Expected UID is **4242**.
+* Our UID is **2013** (level13), so the program exits.
 
-Программа проверяет, что её UID равен определённому значению (в оригинале это 4242). Если UID не совпадает, она отказывается работать. Мы запускаем её как пользователь level13 (UID=2013), поэтому проверка не проходит.
+The program checks that its UID matches a specific value (4242 in the original). If it doesn’t match, it refuses to run. Since we run it as level13 (UID=2013), the check fails.
 
-### Проблема
+### The issue
 
-Для обхода проверки нужно подменить результат `getuid()`. Есть два подхода:
+To bypass the check, we need to spoof the result of `getuid()`. Two possible approaches:
 
-*   **LD_PRELOAD** — подменить функцию динамической библиотекой.
-*   **GDB** — прервать программу и вернуть другое значение из getuid().
+* **LD_PRELOAD** — override the function using a shared library.
+* **GDB** — interrupt the program and return a different value from getuid().
 
-> LD_PRELOAD is an environment variable in Linux that specifies a shared library to be loaded before any other libraries. It is used to override functions in the default libraries with custom implementations. When a program is executed, the dynamic linker (ld.so) searches for the shared libraries required by the program. If LD_PRELOAD is set, the specified library is loaded first, even before the standard libraries like libc. https://medium.com/@hemparekh1596/ld-preload-and-dynamic-library-hijacking-in-linux-237943abb8e0
+> LD_PRELOAD is an environment variable in Linux that specifies a shared library to be loaded before any other libraries. It is used to override functions in the default libraries with custom implementations. When a program is executed, the dynamic linker (ld.so) searches for the shared libraries required by the program. If LD_PRELOAD is set, the specified library is loaded first, even before the standard libraries like libc. [https://medium.com/@hemparekh1596/ld-preload-and-dynamic-library-hijacking-in-linux-237943abb8e0](https://medium.com/@hemparekh1596/ld-preload-and-dynamic-library-hijacking-in-linux-237943abb8e0)
 
-* * *
+---
 
-Use (Exploit)
--------------
+## Use (Exploit)
 
-### Попытка LD_PRELOAD
+### Attempting LD_PRELOAD
 
-Пишем `fakeuid.c` со своей реализацией `getuid()`, компилируем как .so:
+Write `fakeuid.c` with our own implementation of `getuid()`, compile it as .so:
 
-    f4r7s10% gcc -Wall -fPIC -shared -o fakeuid.so fakeuid.c
+```
+f4r7s10% gcc -Wall -fPIC -shared -o fakeuid.so fakeuid.c
+```
 
-Переносим на машину:
+Transfer to the machine:
 
-    f4r7s10% scp -P 4242 ./fakeuid.so level13@192.168.56.107:/tmp/fakeuid.so
-    fakeuid.so                       100%   15KB  31.6MB/s   00:00
+```
+f4r7s10% scp -P 4242 ./fakeuid.so level13@192.168.56.107:/tmp/fakeuid.so
+fakeuid.so                       100%   15KB  31.6MB/s   00:00
+```
 
-Пробуем запустить:
+Try running:
 
-    LD_PRELOAD=/tmp/fakeuid.so ./level13
+```
+LD_PRELOAD=/tmp/fakeuid.so ./level13
+```
 
-**Но это не сработало.** На старых Ubuntu в виртуалке часто включён безопасный режим загрузчика (ld.so), запрещающий LD_PRELOAD для SUID-бинарников.
+**But this didn’t work.**
+On older Ubuntu versions in the VM, the loader (ld.so) often enables a secure mode that blocks LD_PRELOAD for SUID binaries.
 
-* * *
+---
 
-### Рабочий способ — GDB
+### Working method — GDB
 
-Раз LD_PRELOAD блокируется, то остаётся поменять значение `getuid()` через отладчик.
+Since LD_PRELOAD is blocked, the remaining option is to change the value returned by `getuid()` through the debugger.
 
-    level13@SnowCrash:~$ gdb ./level13
-    GNU gdb (Ubuntu/Linaro 7.4-2012.04-0ubuntu2.1)
-    Reading symbols from /home/user/level13/level13...(no debugging symbols found)...done.
+```
+level13@SnowCrash:~$ gdb ./level13
+GNU gdb (Ubuntu/Linaro 7.4-2012.04-0ubuntu2.1)
+Reading symbols from /home/user/level13/level13...(no debugging symbols found)...done.
+```
 
-Ставим брейкпоинт на getuid:
+Set a breakpoint at getuid:
 
-    (gdb) break getuid
-    Breakpoint 1 at 0x8048380
+```
+(gdb) break getuid
+Breakpoint 1 at 0x8048380
+```
 
-Запускаем:
+Run:
 
-    (gdb) run
-    Starting program: /home/user/level13/level13 
-    Breakpoint 1, 0xb7ee4cc0 in getuid () from /lib/i386-linux-gnu/libc.so.6
+```
+(gdb) run
+Starting program: /home/user/level13/level13 
+Breakpoint 1, 0xb7ee4cc0 in getuid () from /lib/i386-linux-gnu/libc.so.6
+```
 
-Подменяем возвращаемое значение return (Если gdb жалуется на тип, (int) обычно проходит. Можно попробовать (uid_t)4242, если тип доступен.):
+Override the return value (if gdb complains about type, (int) usually works; you can try (uid_t)4242 if available):
 
-    (gdb) return (int)4242
-    Make selected stack frame return now? (y or n) y
+```
+(gdb) return (int)4242
+Make selected stack frame return now? (y or n) y
+```
 
-Продолжаем выполнение:
+Continue execution:
 
-    #0  0x0804859a in main ()
-    (gdb) continue
-    Continuing.
-    your token is 2A31L79asukciNyi8uppkEuSx
-    [Inferior 1 (process 5254) exited with code 050]
+```
+#0  0x0804859a in main ()
+(gdb) continue
+Continuing.
+your token is 2A31L79asukciNyi8uppkEuSx
+[Inferior 1 (process 5254) exited with code 050]
+```
 
-Успех — программа приняла «правильный» UID и раскрыла флаг.
+Success — the program accepted the “correct” UID and revealed the flag.
+
+Full session:
 
 ```
 level13@SnowCrash:~$ gdb ./level13
@@ -134,20 +155,20 @@ your token is 2A31L79asukciNyi8uppkEuSx
 (gdb) continue
 ```
 
-Prevention
-----------
+---
 
-*   Не полагаться на `getuid()` как на защиту — это легко подделать.
-*   Использовать безопасные механизмы контроля доступа (capabilities, sudoers и т.д.).
-*   Отключать возможность запуска SUID-файлов под gdb в продакшене.
-*   Отключать отладочную информацию и использовать seccomp/AppArmor.
+## Prevention
 
-* * *
+* Don’t rely on `getuid()` for security — it is easy to spoof.
+* Use proper access control mechanisms (capabilities, sudoers, etc.).
+* Disable the ability to run SUID binaries under gdb in production.
+* Strip debugging symbols and use seccomp/AppArmor.
 
-Documentation
--------------
+---
 
-*   man 2 getuid
-*   man ld.so (раздел про LD\_PRELOAD)
-*   gdb cheat sheet
-*   Dynamic loader & SUID security
+## Documentation
+
+* man 2 getuid
+* man ld.so (section about LD_PRELOAD)
+* gdb cheat sheet
+* Dynamic loader & SUID security
