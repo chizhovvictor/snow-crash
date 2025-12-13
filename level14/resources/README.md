@@ -73,7 +73,7 @@ flag13:x:3013:3013::/home/flag/flag13:/bin/bash
 flag14:x:3014:3014::/home/flag/flag14:/bin/bash
 
 5) ищем программу getflag и скачиваем ее
-scp -P 4242 level14@<vm_ip>:/bin/getflag ~/Download/
+scp -P 4242 level14@<vm_ip>:/bin/getflag ~/Downloads/
 
 6) декомпилируем код программы на ресурсах типа https://dogbolt.org/?id=7497b998-c523-470d-9b4d-2d80c56eee4c#Ghidra=499&Hex-Rays=132&BinaryNinja=194&angr=63
 

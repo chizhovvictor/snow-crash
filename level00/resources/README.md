@@ -36,6 +36,7 @@ The obtained string `cdiiddwpgswtgt` does not work as‑is to log in as flag00. 
 * Anagrams
 
 Websites like [https://www.dcode.fr/](https://www.dcode.fr/) are also useful, where you can try different decoding algorithms.
+OR echo "cdiiddwpgswtgt" | tr 'a-z' 'l-za-k' ROT11
 
 On forums (GitHub, dcode.fr) several methods were tested:
 
