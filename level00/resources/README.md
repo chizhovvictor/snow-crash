@@ -8,7 +8,7 @@ x24ti5gi3x0ol2eh4esiuxias
 
 First, we need to find files associated with the `flag00` user. Use:
 
-```
+```bash
 find / -user "flag00" 2>/dev/null
 ```
 
@@ -36,8 +36,11 @@ The obtained string `cdiiddwpgswtgt` does not work as‑is to log in as flag00. 
 * Anagrams
 
 Websites like [https://www.dcode.fr/](https://www.dcode.fr/) are also useful, where you can try different decoding algorithms.
-OR echo "cdiiddwpgswtgt" | tr 'a-z' 'l-za-k' ROT11
 
+**ROT11**
+```bash
+echo "cdiiddwpgswtgt" | tr 'a-z' 'l-za-k' 
+```
 On forums (GitHub, dcode.fr) several methods were tested:
 
 * Chiffre ROT (Rotation)
