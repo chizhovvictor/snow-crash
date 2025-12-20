@@ -67,8 +67,8 @@ Therefore, if we can make this script run under **flag05**, we will obtain the r
 ### Trying to create a script in /opt/openarenaserver
 
 ```
-level05@SnowCrash:~$ touch /opt/openarenasererver/script.sh
-level05@SnowCrash:~$ vim /opt/openarenasererver/script.sh
+level05@SnowCrash:~$ touch /opt/openarenaserver/script.sh
+level05@SnowCrash:~$ vim /opt/openarenaserver/script.sh
 
 #!/bin/bash
 getflag
@@ -77,15 +77,15 @@ getflag
 Trying to execute it:
 
 ```
-level05@SnowCrash:~$ /opt/openarenasererver/script.sh
-bash: /opt/openarenasererver/script.sh: Permission denied
+level05@SnowCrash:~$ /opt/openarenaserver/script.sh
+bash: /opt/openarenaserver/script.sh: Permission denied
 ```
 
 Add permissions:
 
 ```
-level05@SnowCrash:~$ chmod +x /opt/openarenasererver/script.sh
-level05@SnowCrash:~$ /opt/openarenasererver/script.sh
+level05@SnowCrash:~$ chmod +x /opt/openarenaserver/script.sh
+level05@SnowCrash:~$ /opt/openarenaserver/script.sh
 Check flag.Here is your token :
 Nope there is no token here for you sorry. Try again :)
 ```
