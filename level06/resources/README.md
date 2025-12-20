@@ -44,6 +44,14 @@ print $r;
 ?>
 ```
 
+what is script doing
+1) Read file from 1 arg
+   if we will execute ./level06.php test.txt, test will be read
+2) find something [x что‑то]
+3) this part
+   preg_replace("/( \[x (.*)\] )/e", "y(\"\\2\")", $a); - RCE
+   change and execute like a code 
+
 Code analysis level06.php
 This PHP script performs input data processing and uses the vulnerable preg_replace() construct with the e modifier, which makes it vulnerable to code execution (RCE - Remote Code Execution).
 
