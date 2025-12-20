@@ -30,4 +30,6 @@ chmod 777 ~/Downloads/level02.pcap
 * In the Data section, you will see the word “password”.
 * Right‑click and choose Follow → TCP Stream.
 * Switch the encoding to UTF‑8.
+* Check Hex
+* . = 7f = 127 = del
 * The decoded stream reveals the password: **ft_waNDReL0L**
